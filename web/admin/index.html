@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物业保修系统 - 后台管理</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .login-form {
+            background-color: white;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 50px auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .repair-list {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .repair-item {
+            border-bottom: 1px solid #eee;
+            padding: 15px 0;
+        }
+        .repair-item:last-child {
+            border-bottom: none;
+        }
+        .repair-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .repair-id {
+            font-weight: bold;
+            color: #333;
+        }
+        .repair-status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .status-processing {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .status-completed {
+            background-color: #28a745;
+            color: white;
+        }
+        .repair-details {
+            margin-bottom: 10px;
+        }
+        .repair-detail {
+            margin: 5px 0;
+        }
+        .repair-image {
+            max-width: 200px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status-update {
+            margin-top: 10px;
+        }
+        .status-select {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 14px;
+            width: auto;
+        }
+        .logout {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #f44336;
+        }
+        .logout:hover {
+            background-color: #da190b;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <div class="header">
+            <h1>物业保修系统 - 后台管理</h1>
+            <button v-if="isLoggedIn" class="btn logout btn-sm" @click="logout">退出登录</button>
+        </div>
+
+        <!-- 登录表单 -->
+        <div v-if="!isLoggedIn" class="login-form">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" v-model="loginForm.username" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" v-model="loginForm.password" placeholder="请输入密码">
+            </div>
+            <button class="btn" @click="login">登录</button>
+            <div v-if="message" :class="['message', messageType]">{{ message }}</div>
+        </div>
+
+        <!-- 保修单列表 -->
+        <div v-else class="repair-list">
+            <h2>保修单列表</h2>
+            <div v-if="repairs.length === 0" class="message">暂无保修单</div>
+            <div v-for="repair in repairs" :key="repair.id" class="repair-item">
+                <div class="repair-header">
+                    <span class="repair-id">保修单 #{{ repair.id }}</span>
+                    <span :class="['repair-status', 'status-' + repair.status]">{{ getStatusText(repair.status) }}</span>
+                </div>
+                <div class="repair-details">
+                    <div class="repair-detail"><strong>位置:</strong> {{ repair.location }}</div>
+                    <div class="repair-detail"><strong>描述:</strong> {{ repair.description }}</div>
+                    <div class="repair-detail"><strong>提交时间:</strong> {{ formatDate(repair.created_at) }}</div>
+                    <img v-if="repair.image_url" :src="'http://localhost:8080' + repair.image_url" class="repair-image" alt="保修图片">
+                </div>
+                <div class="status-update">
+                    <select v-model="repair.status" class="status-select">
+                        <option value="pending">待处理</option>
+                        <option value="processing">处理中</option>
+                        <option value="completed">已完成</option>
+                    </select>
+                    <button class="btn btn-sm" @click="updateStatus(repair.id, repair.status)">更新状态</button>
+                </div>
+            </div>
+            <div v-if="message" :class="['message', messageType]">{{ message }}</div>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                isLoggedIn: false,
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                repairs: [],
+                message: '',
+                messageType: ''
+            },
+            methods: {
+                login() {
+                    axios.post('http://localhost:8080/api/auth/login', this.loginForm)
+                        .then(response => {
+                            this.message = response.data.message;
+                            this.messageType = 'success';
+                            this.isLoggedIn = true;
+                            this.getRepairs();
+                        })
+                        .catch(error => {
+                            this.message = error.response.data.error;
+                            this.messageType = 'error';
+                        });
+                },
+                logout() {
+                    this.isLoggedIn = false;
+                    this.repairs = [];
+                },
+                getRepairs() {
+                    axios.get('http://localhost:8080/api/repairs')
+                        .then(response => {
+                            this.repairs = response.data;
+                        })
+                        .catch(error => {
+                            this.message = '获取保修单失败';
+                            this.messageType = 'error';
+                        });
+                },
+                updateStatus(id, status) {
+                    axios.put(`http://localhost:8080/api/repairs/${id}/status`, { status })
+                        .then(response => {
+                            this.message = response.data.message;
+                            this.messageType = 'success';
+                        })
+                        .catch(error => {
+                            this.message = '更新状态失败';
+                            this.messageType = 'error';
+                        });
+                },
+                getStatusText(status) {
+                    const statusMap = {
+                        pending: '待处理',
+                        processing: '处理中',
+                        completed: '已完成'
+                    };
+                    return statusMap[status] || status;
+                },
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return date.toLocaleString();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
