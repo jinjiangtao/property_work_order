@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,6 +14,15 @@ func main() {
 
 	// 创建Gin引擎
 	r := gin.Default()
+
+	// 配置CORS
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
 	// 注册路由
 	registerRoutes(r)
