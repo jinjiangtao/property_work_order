@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物业保修系统 - 业主端</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .image-upload {
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .image-upload:hover {
+            border-color: #4CAF50;
+            background-color: #f0f9f0;
+        }
+        .image-preview {
+            margin-top: 10px;
+            max-width: 100%;
+            border-radius: 4px;
+            display: none;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .login-form {
+            background-color: white;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .tab {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab button {
+            flex: 1;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .tab button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <div class="header">
+            <h1>物业保修系统</h1>
+        </div>
+
+        <div class="tab">
+            <button :class="{active: activeTab === 'login'}" @click="activeTab = 'login'">登录</button>
+            <button :class="{active: activeTab === 'repair'}" @click="activeTab = 'repair'" v-if="isLoggedIn">提交保修</button>
+        </div>
+
+        <!-- 登录表单 -->
+        <div class="tab-content" :class="{active: activeTab === 'login'}">
+            <div class="login-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" v-model="loginForm.username" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" v-model="loginForm.password" placeholder="请输入密码">
+                </div>
+                <button class="btn" @click="login">登录</button>
+                <div v-if="message" :class="['message', messageType]">{{ message }}</div>
+            </div>
+        </div>
+
+        <!-- 保修表单 -->
+        <div class="tab-content" :class="{active: activeTab === 'repair'}" v-if="isLoggedIn">
+            <div class="login-form">
+                <div class="form-group">
+                    <label for="location">保修位置</label>
+                    <input type="text" id="location" v-model="repairForm.location" placeholder="请输入保修位置">
+                </div>
+                <div class="form-group">
+                    <label for="description">问题描述</label>
+                    <textarea id="description" v-model="repairForm.description" placeholder="请详细描述问题"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>上传图片</label>
+                    <div class="image-upload" @click="triggerFileInput">
+                        <input type="file" ref="fileInput" style="display: none" accept="image/*" @change="handleImageUpload">
+                        <p v-if="!repairForm.imageUrl">点击上传图片</p>
+                        <img v-else :src="repairForm.imageUrl" class="image-preview" style="display: block;">
+                    </div>
+                </div>
+                <button class="btn" @click="submitRepair">提交保修</button>
+                <div v-if="message" :class="['message', messageType]">{{ message }}</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                activeTab: 'login',
+                isLoggedIn: false,
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                repairForm: {
+                    location: '',
+                    description: '',
+                    imageUrl: ''
+                },
+                message: '',
+                messageType: ''
+            },
+            methods: {
+                login() {
+                    axios.post('http://localhost:8080/api/auth/login', this.loginForm)
+                        .then(response => {
+                            this.message = response.data.message;
+                            this.messageType = 'success';
+                            this.isLoggedIn = true;
+                            this.activeTab = 'repair';
+                        })
+                        .catch(error => {
+                            this.message = error.response.data.error;
+                            this.messageType = 'error';
+                        });
+                },
+                triggerFileInput() {
+                    this.$refs.fileInput.click();
+                },
+                handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const formData = new FormData();
+                        formData.append('image', file);
+
+                        axios.post('http://localhost:8080/upload', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        })
+                        .then(response => {
+                            this.repairForm.imageUrl = 'http://localhost:8080' + response.data.url;
+                        })
+                        .catch(error => {
+                            this.message = '图片上传失败';
+                            this.messageType = 'error';
+                        });
+                    }
+                },
+                submitRepair() {
+                    axios.post('http://localhost:8080/api/repairs', this.repairForm)
+                        .then(response => {
+                            this.message = response.data.message;
+                            this.messageType = 'success';
+                            // 重置表单
+                            this.repairForm = {
+                                location: '',
+                                description: '',
+                                imageUrl: ''
+                            };
+                        })
+                        .catch(error => {
+                            this.message = '提交失败，请重试';
+                            this.messageType = 'error';
+                        });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
