@@ -17,12 +17,14 @@ func initDB() {
 	var err error
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Printf("Warning: Failed to connect to database: %v", err)
+		return
 	}
 
 	// 测试数据库连接
 	if err = db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+		log.Printf("Warning: Failed to ping database: %v", err)
+		return
 	}
 
 	fmt.Println("Database connected successfully")
@@ -32,6 +34,11 @@ func initDB() {
 }
 
 func createTables() {
+	if db == nil {
+		log.Println("Warning: Database connection is nil, skipping table creation")
+		return
+	}
+
 	// 创建用户表
 	userTable := `
 	CREATE TABLE IF NOT EXISTS users (
@@ -60,12 +67,14 @@ func createTables() {
 	// 执行创建表语句
 	_, err := db.Exec(userTable)
 	if err != nil {
-		log.Fatalf("Failed to create users table: %v", err)
+		log.Printf("Warning: Failed to create users table: %v", err)
+		return
 	}
 
 	_, err = db.Exec(repairTable)
 	if err != nil {
-		log.Fatalf("Failed to create repairs table: %v", err)
+		log.Printf("Warning: Failed to create repairs table: %v", err)
+		return
 	}
 
 	fmt.Println("Tables created successfully")

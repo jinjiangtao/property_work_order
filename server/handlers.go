@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-contrib/cors"
 )
 
 // 登录请求结构
@@ -40,6 +39,11 @@ type UserRequest struct {
 
 // 登录处理
 func login(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+		return
+	}
+
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -70,6 +74,11 @@ func login(c *gin.Context) {
 
 // 创建保修单
 func createRepair(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+		return
+	}
+
 	var req RepairRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -99,6 +108,11 @@ func createRepair(c *gin.Context) {
 
 // 获取保修单列表
 func getRepairs(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+		return
+	}
+
 	rows, err := db.Query("SELECT id, user_id, location, description, image_url, status, created_at FROM repairs")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get repair requests"})
@@ -133,6 +147,11 @@ func getRepairs(c *gin.Context) {
 
 // 获取单个保修单
 func getRepair(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -165,6 +184,11 @@ func getRepair(c *gin.Context) {
 
 // 更新保修单状态
 func updateRepairStatus(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -189,6 +213,11 @@ func updateRepairStatus(c *gin.Context) {
 
 // 创建用户
 func createUser(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+		return
+	}
+
 	var req UserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -206,6 +235,11 @@ func createUser(c *gin.Context) {
 
 // 获取用户列表
 func getUsers(c *gin.Context) {
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+		return
+	}
+
 	rows, err := db.Query("SELECT id, username, role, created_at FROM users")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get users"})
@@ -252,10 +286,10 @@ func uploadImage(c *gin.Context) {
 	// 生成文件名
 	ext := filepath.Ext(file.Filename)
 	filename := fmt.Sprintf("%d%s", time.Now().Unix(), ext)
-	filepath := filepath.Join(uploadDir, filename)
+	filePath := filepath.Join(uploadDir, filename)
 
 	// 保存文件
-	if err := c.SaveUploadedFile(file, filepath); err != nil {
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
 		return
 	}

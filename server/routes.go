@@ -7,6 +7,9 @@ import (
 )
 
 func registerRoutes(r *gin.Engine) {
+	// 静态文件服务
+	r.Static("/uploads", "./uploads")
+
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -24,8 +27,8 @@ func registerRoutes(r *gin.Engine) {
 		// 保修相关
 		repairs := api.Group("/repairs")
 		{
-			repairs.POST("/", createRepair)
-			repairs.GET("/", getRepairs)
+			repairs.POST("", createRepair)
+			repairs.GET("", getRepairs)
 			repairs.GET("/:id", getRepair)
 			repairs.PUT("/:id/status", updateRepairStatus)
 		}
@@ -33,8 +36,8 @@ func registerRoutes(r *gin.Engine) {
 		// 用户相关
 		users := api.Group("/users")
 		{
-			users.POST("/", createUser)
-			users.GET("/", getUsers)
+			users.POST("", createUser)
+			users.GET("", getUsers)
 		}
 	}
 
